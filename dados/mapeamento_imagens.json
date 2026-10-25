@@ -1,0 +1,106 @@
+{
+    "desenvolvimento": [
+        {
+            "novo_nome": "dev_01.jpg",
+            "original": "IMG_20261024_143931464.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_01.jpg"
+        },
+        {
+            "novo_nome": "dev_02.jpg",
+            "original": "IMG_20261024_143939413.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_02.jpg"
+        },
+        {
+            "novo_nome": "dev_03.jpg",
+            "original": "IMG_20261024_143944813.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_03.jpg"
+        },
+        {
+            "novo_nome": "dev_04.jpg",
+            "original": "IMG_20261024_143950129.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_04.jpg"
+        },
+        {
+            "novo_nome": "dev_05.jpg",
+            "original": "IMG_20261024_143957344.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_05.jpg"
+        },
+        {
+            "novo_nome": "dev_06.jpg",
+            "original": "IMG_20261024_144002202.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_06.jpg"
+        },
+        {
+            "novo_nome": "dev_07.jpg",
+            "original": "IMG_20261024_144004159.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_07.jpg"
+        },
+        {
+            "novo_nome": "dev_08.jpg",
+            "original": "IMG_20261024_144009968.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_08.jpg"
+        },
+        {
+            "novo_nome": "dev_09.jpg",
+            "original": "IMG_20261024_144018173.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_09.jpg"
+        },
+        {
+            "novo_nome": "dev_10.jpg",
+            "original": "IMG_20261024_144021463.jpg",
+            "caminho": "dados\\imagens\\desenvolvimento\\dev_10.jpg"
+        }
+    ],
+    "generalizacao": [
+        {
+            "novo_nome": "gen_01.jpg",
+            "original": "IMG_20261024_144026495.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_01.jpg"
+        },
+        {
+            "novo_nome": "gen_02.jpg",
+            "original": "IMG_20261024_144029600.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_02.jpg"
+        },
+        {
+            "novo_nome": "gen_03.jpg",
+            "original": "IMG_20261024_144032787.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_03.jpg"
+        },
+        {
+            "novo_nome": "gen_04.jpg",
+            "original": "IMG_20261024_144036926.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_04.jpg"
+        },
+        {
+            "novo_nome": "gen_05.jpg",
+            "original": "IMG_20261024_144041129.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_05.jpg"
+        },
+        {
+            "novo_nome": "gen_06.jpg",
+            "original": "IMG_20261024_144046885.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_06.jpg"
+        },
+        {
+            "novo_nome": "gen_07.jpg",
+            "original": "IMG_20261024_144053768.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_07.jpg"
+        },
+        {
+            "novo_nome": "gen_08.jpg",
+            "original": "IMG_20261024_144057047.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_08.jpg"
+        },
+        {
+            "novo_nome": "gen_09.jpg",
+            "original": "IMG_20261024_144101288.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_09.jpg"
+        },
+        {
+            "novo_nome": "gen_10.jpg",
+            "original": "IMG_20261024_144122903.jpg",
+            "caminho": "dados\\imagens\\generalizacao\\gen_10.jpg"
+        }
+    ]
+}
