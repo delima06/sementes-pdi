@@ -25,7 +25,8 @@ pdi-sementes/
 │   ├── Projeto_da_Unidade_II.pdf
 │   └── Relatório PDI.pdf
 ├── saidas/                     # Saídas automáticas do script (imagens processadas e CSVs)
-├── src/                        # Código-fonte Python (pipeline de PDI e scripts CLI)
+├── processar.py                # Script CLI principal de processamento (atende as 4 saídas do edital)
+├── avaliar_metricas.py         # Script de benchmark e comparação com Ground Truth
 ├── .gitignore
 └── README.md
 ```
@@ -54,3 +55,36 @@ Consulte o guia completo em [docs/Plano_de_Desenvolvimento_PDI.pdf](docs/Plano_d
 3. Configure `File -> Save Automatically` e marque como pasta de saída `dados/anotacoes/`.
 4. Use o atalho **`Ctrl + N`** para contornar cada feijão com **Polígonos** (não use retângulos).
 5. Nome da classe: digite **`semente`** (tudo minúsculo).
+
+---
+
+## 🚀 Como Executar o Pipeline de Processamento
+
+Para processar uma imagem e gerar automaticamente as 4 saídas estritas do edital:
+
+```bash
+python processar.py dados/imagens/desenvolvimento/dev_01.jpg
+```
+
+### Saídas Geradas:
+1. **Terminal:** Exibe `Total de sementes identificadas: {n}`.
+2. **`saidas/contornos_*.png`:** Imagem com as Bounding Boxes (verde) e contornos individuais (vermelho).
+3. **`saidas/fundo_preto_*.png`:** Imagem com os pixels originais dos feijões sobre fundo 100% preto.
+4. **`saidas/metricas_*.csv`:** Tabela com coordenadas (`xmin`, `ymin`, `xmax`, `ymax`), `area`, `perimetro` e `circularidade`.
+
+---
+
+## 📊 Avaliação de Métricas (Benchmark)
+
+Após salvar os arquivos `.json` do Labelme em `dados/anotacoes/`, execute o script de benchmark:
+
+```bash
+python avaliar_metricas.py
+```
+
+O script calcula automaticamente:
+- **MAE de Contagem** ($|N_{\text{pred}} - N_{\text{real}}|$)
+- **IoU de Bounding Boxes** com limiar $\ge 0.5$ (Precisão, Recall e F1-Score)
+- **Segmentação Pixel a Pixel** (Índices de Jaccard e Dice)
+- Relatório consolidado em `saidas/relatorio_benchmark.csv`.
+
