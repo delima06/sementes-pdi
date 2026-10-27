@@ -270,7 +270,7 @@ def main():
     parser.add_argument(
         "imagem",
         type=str,
-        help="Caminho do arquivo de imagem (ex: dados/imagens/desenvolvimento/dev_01.jpg)"
+        help="Caminho do arquivo de imagem ou de uma pasta com imagens (ex: dados/imagens/desenvolvimento/dev_01.jpg ou dados/imagens/desenvolvimento/)"
     )
     parser.add_argument(
         "--output_dir",
@@ -280,7 +280,25 @@ def main():
     )
 
     args = parser.parse_args()
-    processar_imagem(args.imagem, args.output_dir)
+
+    # Se o argumento for um diretório, processa em lote todas as imagens contidas nele
+    if os.path.isdir(args.imagem):
+        extensoes = (".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff")
+        arquivos = sorted([
+            os.path.join(args.imagem, f) for f in os.listdir(args.imagem)
+            if f.lower().endswith(extensoes)
+        ])
+        if not arquivos:
+            print(f"Aviso: Nenhuma imagem encontrada no diretório '{args.imagem}'.")
+            return
+
+        print(f"=== Processando lote de {len(arquivos)} imagens em '{args.imagem}' ===")
+        for arq in arquivos:
+            print(f"\n--- Processando: {os.path.basename(arq)} ---")
+            processar_imagem(arq, args.output_dir)
+        print("\n=== Lote finalizado com sucesso! ===")
+    else:
+        processar_imagem(args.imagem, args.output_dir)
 
 
 if __name__ == "__main__":
