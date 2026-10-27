@@ -123,7 +123,7 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
         cv2.drawContours(mascara_comp, [c], -1, 255, -1)
         dist_comp = cv2.distanceTransform(mascara_comp, cv2.DIST_L2, 5)
 
-        if area_comp < 18000:
+        if area_comp < 16000:
             # Grão isolado: extrai o núcleo seguro (sure foreground)
             _, fg_local = cv2.threshold(dist_comp, 0.45 * dist_comp.max(), 255, 0)
             fg_local = np.uint8(fg_local)
@@ -136,24 +136,23 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
             else:
                 marcador_fg = cv2.bitwise_or(marcador_fg, fg_local)
         else:
-            # Aglomerado com feijões em contato: varredura na distância até individualizar os núcleos
-            fg_escolhido = None
-            for ratio in np.arange(0.50, 0.75, 0.05):
-                _, fg_teste = cv2.threshold(dist_comp, ratio * dist_comp.max(), 255, 0)
-                fg_teste = np.uint8(fg_teste)
-                qtd_blobs, _ = cv2.connectedComponents(fg_teste)
-                qtd_blobs -= 1
+            # Aglomerado com feijões em contato: detecção morfológica de máximos locais (picos)
+            # Dilatação morfológica na transformada de distância simula a busca por cristas e centros
+            kernel_pico = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (23, 23))
+            dist_dilatada = cv2.dilate(dist_comp, kernel_pico)
+            picos = (dist_comp == dist_dilatada) & (dist_comp > 0.45 * dist_comp.max())
+            picos_uint8 = np.uint8(picos) * 255
 
-                # Estimativa baseada no tamanho médio de cada feijão (~12.000 px)
-                estimativa_feijoes = max(2, int(round(area_comp / 12000.0)))
-                if qtd_blobs >= estimativa_feijoes or ratio >= 0.70:
-                    fg_escolhido = fg_teste
-                    break
+            qtd_picos, _ = cv2.connectedComponents(picos_uint8)
+            qtd_picos -= 1
 
-            if fg_escolhido is not None and cv2.countNonZero(fg_escolhido) > 0:
-                marcador_fg = cv2.bitwise_or(marcador_fg, fg_escolhido)
+            if qtd_picos >= 2:
+                # Expansão sutil dos picos para gerar sementes conexas e estáveis para o watershed
+                kernel_seed = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                fg_aglomerado = cv2.dilate(picos_uint8, kernel_seed)
+                marcador_fg = cv2.bitwise_or(marcador_fg, fg_aglomerado)
             else:
-                _, fg_padrao = cv2.threshold(dist_comp, 0.60 * dist_comp.max(), 255, 0)
+                _, fg_padrao = cv2.threshold(dist_comp, 0.75 * dist_comp.max(), 255, 0)
                 marcador_fg = cv2.bitwise_or(marcador_fg, np.uint8(fg_padrao))
 
     # Rotulação dos componentes conectados dos feijões
@@ -194,8 +193,8 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
         c_maior = max(cnts_objeto, key=cv2.contourArea)
         area = float(cv2.contourArea(c_maior))
 
-        # Descarte de ruídos menores que 2500 pixels
-        if area < 2500:
+        # Descarte de fragmentos espúrios e ruídos menores que 4000 pixels (feijão típico tem > 7000 px)
+        if area < 4000:
             continue
 
         perimetro = float(cv2.arcLength(c_maior, True))
