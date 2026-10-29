@@ -56,7 +56,7 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
         dist_comp = cv2.distanceTransform(mascara_comp, cv2.DIST_L2, 5)
 
         if area_comp < 18000:
-            # Grão isolado: threshold em 45% do pico máximo local
+            # Grão isolado: extrai o núcleo seguro (sure foreground)
             _, fg_local = cv2.threshold(dist_comp, 0.45 * dist_comp.max(), 255, 0)
             fg_local = np.uint8(fg_local)
 
@@ -69,16 +69,16 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
             else:
                 marcador_fg = cv2.bitwise_or(marcador_fg, fg_local)
         else:
-            # Aglomerado em contato: varredura adaptativa progressiva (50% a 75%)
-            # Estima número de sementes pela área média (~12.000 px/feijão)
+            # Aglomerado com feijões em contato: varredura na distância até individualizar os núcleos
             fg_escolhido = None
-            estimativa_feijoes = max(2, int(round(area_comp / 12000.0)))
             for ratio in np.arange(0.50, 0.75, 0.05):
                 _, fg_teste = cv2.threshold(dist_comp, ratio * dist_comp.max(), 255, 0)
                 fg_teste = np.uint8(fg_teste)
                 qtd_blobs, _ = cv2.connectedComponents(fg_teste)
                 qtd_blobs -= 1
 
+                # Estimativa baseada no tamanho médio de cada feijão (~12.000 px)
+                estimativa_feijoes = max(2, int(round(area_comp / 12000.0)))
                 if qtd_blobs >= estimativa_feijoes or ratio >= 0.70:
                     fg_escolhido = fg_teste
                     break
@@ -86,7 +86,7 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
             if fg_escolhido is not None and cv2.countNonZero(fg_escolhido) > 0:
                 marcador_fg = cv2.bitwise_or(marcador_fg, fg_escolhido)
             else:
-                _, fg_padrao = cv2.threshold(dist_comp, 0.60 * dist_comp.max(), 255, 0)
+                _, fg_padrao = cv2.threshold(dist_comp, 0.75 * dist_comp.max(), 255, 0)
                 marcador_fg = cv2.bitwise_or(marcador_fg, np.uint8(fg_padrao))
 
     # Rotulação de sementes confirmadas (Foreground)
@@ -120,7 +120,9 @@ def processar_imagem(caminho_imagem, pasta_saida="saidas"):
 
         # Área (A): Contagem de pixels do contorno
         area = float(cv2.contourArea(c_maior))
-        if area < 2500:  # Descarte de ruídos residuais
+
+        # Descarte de ruídos menores que 2500 pixels
+        if area < 2500:
             continue
 
         # Perímetro (P): Comprimento da curva contínua fechada (pixels)
