@@ -1,23 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Projeto de Processamento Digital de Imagens (PDI) - Unidade II
-TAD0018 - Tecnologia em Análise e Desenvolvimento de Sistemas (EAJ / UFRN)
-
-Script: avaliar_metricas.py
-Objetivo:
-    Avaliação quantitativa e validação científica do método computacional,
-    comparando os resultados preditos com a Verdade de Solo (Ground Truth)
-    anotada no software Labelme.
-
-Alinhamento com o Relatório Técnico (docs/Relatório PDI.pdf):
-    - Seção 2.2: Avaliação da generalização (Desenvolvimento vs Generalização).
-    - Seção 2.4, Item Contagem: Erro Absoluto de Contagem (MAE): |N_pred - N_real|.
-    - Seção 2.4, Item Identificação e Localização: Taxa de sobreposição (IoU de Bounding Boxes >= 0.5)
-      com cálculo de True Positives (TP), False Positives (FP), False Negatives (FN), Precisão, Recall e F1.
-    - Seção 2.4, Item Segmentação: Taxa de acerto pixel a pixel (Índice de Jaccard e Coeficiente de Dice).
-    - Seção 2.4, Item Procedimentos Estatísticos: Média, Desvio Padrão e Coeficiente de Variação (CV).
-"""
 
 import argparse
 import csv
@@ -28,39 +8,33 @@ import sys
 import cv2
 import numpy as np
 
-# Importa o pipeline central diretamente
 from processar import processar_imagem
 
 
 def calcular_iou_bbox(box1, box2):
-    """
-    [Relatório - Seção 2.4: Taxa de Sobreposição / IoU de Bounding Boxes]
-    Calcula o índice de Interseção sobre a União (Intersection over Union) entre duas caixas.
-    IoU = Area(B_pred ∩ B_gt) / Area(B_pred ∪ B_gt)
-    Formato esperado: [xmin, ymin, xmax, ymax]
-    """
     x1 = max(box1[0], box2[0])
     y1 = max(box1[1], box2[1])
     x2 = min(box1[2], box2[2])
     y2 = min(box1[3], box2[3])
 
+    # Interseção: largura e altura sobrepostas
     inter_w = max(0, x2 - x1)
     inter_h = max(0, y2 - y1)
     inter_area = inter_w * inter_h
 
+    # União = Area1 + Area2 - Interseção
     area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
     area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
-
     uniao = area1 + area2 - inter_area
+
     return (inter_area / uniao) if uniao > 0 else 0.0
 
 
 def carregar_ground_truth_labelme(caminho_json):
     """
-    [Relatório - Seção 2.2: Referências Manuais do Labelme]
-    Lê o arquivo de anotação .json exportado pelo Labelme e extrai:
-    - Bounding Boxes de referência: [xmin, ymin, xmax, ymax]
-    - Máscara binária exata dos polígonos manuais (Ground Truth)
+    Extrai do arquivo JSON do Labelme:
+    1. Bounding Boxes de referência: [xmin, ymin, xmax, ymax]
+    2. Máscara binária exata dos polígonos manuais (Ground Truth)
     """
     with open(caminho_json, "r", encoding="utf-8") as f:
         dados = json.load(f)
@@ -73,10 +47,10 @@ def carregar_ground_truth_labelme(caminho_json):
 
     for shape in dados.get("shapes", []):
         label = shape.get("label", "").strip().lower()
-        # Filtra a classe padronizada 'semente' definida no guia do grupo
         if "semente" in label or "feijao" in label or "grao" in label:
             pontos = np.array(shape.get("points"), dtype=np.int32)
             if len(pontos) >= 3:
+                # Preenche polígono para formar a máscara de verdade de solo
                 cv2.fillPoly(mascara_gt, [pontos], 255)
                 xmin = int(np.min(pontos[:, 0]))
                 ymin = int(np.min(pontos[:, 1]))
@@ -89,39 +63,41 @@ def carregar_ground_truth_labelme(caminho_json):
 
 def avaliar_imagem(caminho_imagem, caminho_json, pasta_saida="saidas"):
     """
-    Compara a predição gerada pelo pipeline com o Ground Truth do Labelme.
+    Calcula as métricas quantitativas de uma única imagem contra o Ground Truth:
+    1. MAE de Contagem
+    2. Correspondência de Bounding Boxes (TP, FP, FN, Precisão, Recall, F1)
+    3. Segmentação Pixel a Pixel (Jaccard e Dice)
     """
     bboxes_gt, mask_gt = carregar_ground_truth_labelme(caminho_json)
     qtd_gt = len(bboxes_gt)
 
-    # Executa o algoritmo na imagem de entrada
     total_pred, metricas_pred = processar_imagem(caminho_imagem, pasta_saida=pasta_saida)
     bboxes_pred = [[m["xmin"], m["ymin"], m["xmax"], m["ymax"]] for m in metricas_pred]
 
-    # Carrega a máscara binária predita a partir da imagem de fundo preto gerada
+    # Carrega máscara predita do fundo preto gerado
     nome_base = os.path.splitext(os.path.basename(caminho_imagem))[0]
     caminho_fp = os.path.join(pasta_saida, f"fundo_preto_{nome_base}.png")
     img_fp = cv2.imread(caminho_fp, cv2.IMREAD_GRAYSCALE)
     mask_pred = np.uint8(img_fp > 0) * 255 if img_fp is not None else np.zeros_like(mask_gt)
 
-    # =========================================================================
-    # [Relatório - Seção 2.4, Item 1: Erro Absoluto de Contagem (MAE)]
-    # "Usaremos o Erro Absoluto Médio, o que é basicamente a diferença média
-    #  entre a quantidade real de feijões e a quantidade que o programa contou:
-    #  Erro Absoluto = |N_pred - N_real|"
-    # =========================================================================
+    # -------------------------------------------------------------------------
+    # MÉTRICA 1: ERRO ABSOLUTO DE CONTAGEM (MAE)
+    # Fórmula: Erro = |N_predito - N_real|
+    # Avalia a precisão numérica global do algoritmo.
+    # -------------------------------------------------------------------------
     erro_contagem = abs(total_pred - qtd_gt)
 
-    # =========================================================================
-    # [Relatório - Seção 2.4, Item 2: Identificação, Localização e Bounding Boxes]
-    # "Para avaliar as bounding boxes, vamos calcular a taxa de sobreposição...
-    #  Uma detecção é considerada Acerto (True Positive) se IoU >= 0.5."
-    # =========================================================================
+    # -------------------------------------------------------------------------
+    # MÉTRICA 2: MATCHING DE BOUNDING BOXES (IoU >= 0.50)
+    # Critério canônico do edital e literatura (PASCAL VOC):
+    # - True Positive (TP): Caixa predita com IoU >= 0.50 contra caixa GT
+    # - False Positive (FP): Caixa predita sem correspondência válida (falso alarme)
+    # - False Negative (FN): Caixa GT não detectada pelo algoritmo
+    # -------------------------------------------------------------------------
     matched_gt = set()
     ious_tp = []
     tp = 0
 
-    # Correspondência gulosa por maior IoU
     for b_pred in bboxes_pred:
         melhor_iou = 0.0
         melhor_idx_gt = -1
@@ -134,28 +110,29 @@ def avaliar_imagem(caminho_imagem, caminho_json, pasta_saida="saidas"):
                 melhor_iou = iou
                 melhor_idx_gt = idx_gt
 
-        # Limiar de acerto padronizado no edital e literatura (IoU >= 0.50)
-        if melhor_iou >= 0.5 and melhor_idx_gt != -1:
+        if melhor_iou >= 0.50 and melhor_idx_gt != -1:
             tp += 1
             matched_gt.add(melhor_idx_gt)
             ious_tp.append(melhor_iou)
 
-    fp = total_pred - tp  # Predições sem correspondência (falsos positivos)
-    fn = qtd_gt - tp      # Sementes reais não detectadas (falsos negativos)
+    fp = total_pred - tp
+    fn = qtd_gt - tp
 
+    # Fórmulas estatísticas clássicas:
+    # Precisão = TP / (TP + FP)  -> De tudo que detectou, quanto era semente real?
+    # Recall = TP / (TP + FN)    -> De todas as sementes reais, quantas achou?
+    # F1-Score = 2 * (P * R) / (P + R) -> Média harmônica
     precisao = (tp / (tp + fp)) if (tp + fp) > 0 else 0.0
     recall = (tp / (tp + fn)) if (tp + fn) > 0 else 0.0
     f1 = (2 * precisao * recall / (precisao + recall)) if (precisao + recall) > 0 else 0.0
     iou_medio_bbox = float(np.mean(ious_tp)) if ious_tp else 0.0
 
-    # =========================================================================
-    # [Relatório - Seção 2.4, Item 3: Segmentação Pixel a Pixel (Jaccard e Dice)]
-    # "Para avaliar os pixels da semente em si, vamos medir a taxa de acerto de
-    #  pixels, comparando se a região limiarizada pelo nosso método bate com o
-    #  polígono perfeito do Labelme."
-    #  - Jaccard (IoU de Pixels) = |M_pred ∩ M_gt| / |M_pred ∪ M_gt|
-    #  - Dice Score = 2 * |M_pred ∩ M_gt| / (|M_pred| + |M_gt|)
-    # =========================================================================
+    # -------------------------------------------------------------------------
+    # MÉTRICA 3: SEGMENTAÇÃO PIXEL A PIXEL (Jaccard e Dice)
+    # Avalia a qualidade do recorte geométrico em nível de pixel:
+    # - Índice de Jaccard (IoU de Pixels) = |M_pred ∩ M_gt| / |M_pred ∪ M_gt|
+    # - Coeficiente de Dice = (2 * |M_pred ∩ M_gt|) / (|M_pred| + |M_gt|)
+    # -------------------------------------------------------------------------
     intersecao_pixel = np.logical_and(mask_pred > 0, mask_gt > 0).sum()
     uniao_pixel = np.logical_or(mask_pred > 0, mask_gt > 0).sum()
     soma_pixels = (mask_pred > 0).sum() + (mask_gt > 0).sum()
@@ -182,14 +159,12 @@ def avaliar_imagem(caminho_imagem, caminho_json, pasta_saida="saidas"):
 
 def executar_avaliacao_geral(pasta_anotacoes="dados/anotacoes", pasta_saida="saidas"):
     """
-    [Relatório - Seção 2.4: Procedimentos Estatísticos e Generalização]
     Varre a pasta de anotações manuais, executa o benchmark em todas as imagens
     disponíveis e consolida a tabela de métricas comparativas em CSV.
     """
     arquivos_json = sorted(glob.glob(os.path.join(pasta_anotacoes, "*.json")))
     if not arquivos_json:
         print(f"Aviso: Nenhum arquivo .json do Labelme encontrado em '{pasta_anotacoes}'.")
-        print("Assim que as anotações forem salvas nessa pasta, execute este script para gerar o benchmark.")
         return
 
     print(f"Encontrados {len(arquivos_json)} arquivos de anotação Ground Truth.\nIniciando avaliação...")
